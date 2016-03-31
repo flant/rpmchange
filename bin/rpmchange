@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+# vi: set ft=ruby :
+# vi: set sts=2 ts=2 sw=2 :
+
+require 'rpmchange'
+
+Rpmchange::Cli.start
