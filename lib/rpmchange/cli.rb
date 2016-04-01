@@ -8,7 +8,7 @@ module Rpmchange
       end
 
       def spec_construct(options)
-        Spec.new(options['specfile'])
+        Spec.loadfile(options['specfile'])
       end
 
       def spec_write!(spec)
