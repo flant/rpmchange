@@ -1,0 +1,8 @@
+deploy:
+  provider: rubygems
+  api_key:
+    secure: O3hyYvf7TxqhzYQo4eu0f+WMO0EJhg2W1D1rx8vrviC/1VybQ9Ctl0WPWtL20/YohtDdAR0SG+PsMaiFKYJAl1RxmwkSre8GkBvHQlsWhKxQ8IPQpA4xZRUrMYN4OActlqREJBVrIjgGjOrfmnlf/9+4SjYRJhfH5yuz/fcb9/KbGTgLreEk4FRULRUfdAhw3xiWp7S9Cg8vYi4OU6NEJau3PbLfpGwzbv9Ms2JEzwj2ppASByN+jBjUfdX4t2hcUGFlTItRy2e+iM6MVX8apEhzUC+NHNuJuQR2YwdTpmPZZoGWp+tof3ToqPlBy9/DOkCqG0AF4gQUNlFFEaZ/riIymOyLVGHQUkaYE6Qs7a3WJ8fgaJlQDgopxGf6sm69LZ7+s690EsBiC9zNhNii2g6Mc4suVcW5baA6+O1I5gvx+D7Ac2aSPGZoaqG5c9IC+X0/YlIlskK8xABslNWnkDrUNJWJkElxUj6HfRBpkHOkkGDe7v6+n2lzw+pqrhd2ESrHnW1yVDa4+FWZWqV7IuIcgoN1PaO4d+XH2+e4lSokcEIf8Nz65vj0DBLP0Q9Yh6eEp/wATK3x9PLoNz+s92UE40YRXPjP8fjmxijqbpAsTCc8A1fRYveSudkZ4H1IVdLVP+oVKFvqqBGNxmndhEuQBhtsigfh838hrgvIg/4=
+  gem: rpmchange
+  on:
+    tags: true
+    repo: flant/rpmchange
