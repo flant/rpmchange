@@ -1,20 +1,31 @@
 module Rpmchange
   class Spec
-    SECTIONS = %i{prep build install clean check files changelog}
+    class << self
+      def load(str)
+        Spec.new(str)
+      end
 
-    attr_reader :path
+      def loadfile(path)
+        Spec.new(Pathname.new(path).read)
+      end
 
-    def initialize(path)
-      @path = Pathname.new(path).expand_path
-      _load
+      def diff(a, b, **kwargs)
+        Diffy::Diff.new(a.to_s, b.to_s, {diff: "-U 3"}.merge(kwargs))
+      end
+
+      def without_macro
+      end
+    end # << self
+
+    attr_reader :str
+
+    def initialize(str)
+      @str = str
+      _load!
     end
 
     def reload
       @sections = nil
-    end
-
-    def save!
-      path.write dump
     end
 
     def dump
@@ -29,45 +40,84 @@ module Rpmchange
       end.map {|line| line + "\n"}.join
     end
 
-    def version
-      find_tag(:Version)
+    def to_s
+      dump
     end
 
-    def version=(v)
-      _replace_line(lines: preamble_lines, new_line: "Version: #{v}", match: /Version: /)
+    def inspect
+      "#<#{self.class}: #{name}/#{full_version}>"
+    end
+
+    def diff(with: nil, **kwargs)
+      if with
+        self.class.diff(dump, with, **kwargs)
+      else
+        self.class.diff(str, dump, **kwargs)
+      end
+    end
+
+    def name
+      tag(:name)
+    end
+
+    def name=(value)
+      set_tag(:name, value)
+    end
+
+    def version
+      tag(:version)
+    end
+
+    def version=(value)
+      set_tag(:version, value)
     end
 
     def release
-      find_tag(:Release).gsub('%{?dist}', '')
+      tag(:release)
     end
 
-    def release=(v)
-      _replace_line(lines: preamble_lines, new_line: "Release: #{v}%{?dist}", match: /Release: /)
+    def release=(value)
+      set_tag(:release, value)
     end
 
     def epoch
-      find_tag(:Epoch)
+      tag(:epoch)
     end
 
-    def epoch=(v)
-      _replace_line(lines: preamble_lines, new_line: "Epoch: #{v}", match: /Epoch: /)
+    def epoch=(value)
+      set_tag(:epoch, value)
+    end
+
+    def full_version
+      [epoch, [version, release].compact.join('-')]
+        .compact
+          .join(':')
+            .gsub(/%{.*}/, '')
     end
 
     def append_changelog(name:, email:, message:)
-      changelog_version = [epoch, [version, release].compact.join('-')].compact.join(':')
-      ["* #{Time.now.strftime("%a %b %e %Y")} #{name} <#{email}> - #{changelog_version}",
+      ["* #{Time.now.strftime("%a %b %e %Y")} #{name} <#{email}> - #{full_version}",
         "- #{message}",
         "",
       ].reverse_each {|line| _prepend_line(lines: changelog_lines, new_line: line)}
     end
 
-    def find_tag(tag)
-      match = preamble_lines.find {|line| line.start_with? "#{tag}:"}
-      match.split(': ').last if match
+    def to_tag_name(tag)
+      tag.to_s.capitalize
+    end
+
+    def tag(tag)
+      match = preamble_lines.find {|line| line.start_with? "#{to_tag_name(tag)}:"}
+      res = match.split(':', 2).last if match
+      res.strip if res
+    end
+
+    def set_tag(tag, value)
+      _replace_line(lines: preamble_lines, new_line: "#{to_tag_name(tag)}: #{value.strip}", match: /#{to_tag_name(tag)}:/)
     end
 
     def append_tag(tag, value)
-      _append_line(lines: preamble_lines, new_line: "#{tag.to_s.capitalize}: #{value}")
+      _append_line(lines: preamble_lines, new_line: "#{to_tag_name(tag)}: #{value}")
     end
 
     def append_patch(value)
@@ -109,6 +159,7 @@ module Rpmchange
       @preamble_lines ||= []
     end
 
+    SECTIONS = %i{prep build install clean check files changelog}
     SECTIONS.each do |section|
       define_method("#{section}_lines") {|params=nil| (sections[section] || {})[params] || []}
     end
@@ -157,17 +208,17 @@ module Rpmchange
     end
 
     def _patch_tag_line_parse(line)
-      tag, value = line.split(': ', 2)
-      [tag.split('Patch').last.to_i, value] if tag
+      tag, value = line.split(':', 2)
+      [tag.split('Patch').last.to_i, value.strip] if tag
     end
 
     def _patch_tag_line_regex
-      @_patch_tag_line_regex ||= /^Patch[0-9]*: /
+      @_patch_tag_line_regex ||= /^Patch[0-9]*:/
     end
 
-    def _load
+    def _load!
       current_section = preamble_lines
-      path.readlines.each do |line|
+      str.lines.each do |line|
         line.chomp!
         if section = SECTIONS.find {|s| line.start_with? "%#{s}"}
           section_params = line.split(' ')[1..-1]

@@ -7,8 +7,12 @@ module Rpmchange
         end
       end
 
-      def construct_spec(options)
+      def spec_construct(options)
         Spec.new(options['specfile'])
+      end
+
+      def spec_write!(spec)
+        File.open(options['specfile'], 'w') {|f| f.write spec.dump}
       end
     end # << self
 
@@ -22,11 +26,26 @@ module Rpmchange
     method_option :email, {type: :string, desc: "maintainer email", required: true}
     method_option :message, {type: :string, desc: "changelog message", required: true}
     def append_changelog
-      spec = self.class.construct_spec(options)
+      spec = self.class.spec_construct options
       spec.append_changelog(name: options['name'],
                             email: options['email'],
                             message: options['message'])
-      spec.save!
+      self.class.spec_write! spec
+    end
+
+    desc "tag", "Get or set spec tag"
+    shared_options
+    method_option :name, {type: :string, desc: "tag name", required: true}
+    method_option :value, {type: :string, desc: "tag value"}
+    def tag
+      spec = self.class.spec_construct options
+      if options['value']
+        spec.set_tag(options['name'], options['value'])
+        self.class.spec_write! spec
+      else
+        value = spec.tag(options['name'])
+        puts value if value
+      end
     end
   end # Cli
 end # Rpmchange
