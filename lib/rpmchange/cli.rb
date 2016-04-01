@@ -22,9 +22,11 @@ module Rpmchange
     method_option :email, {type: :string, desc: "maintainer email", required: true}
     method_option :message, {type: :string, desc: "changelog message", required: true}
     def append_changelog
-      construct_spec(options).append_changelog(name: options['name'],
-                                               email: options['email'],
-                                               message: options['message'])
+      spec = self.class.construct_spec(options)
+      spec.append_changelog(name: options['name'],
+                            email: options['email'],
+                            message: options['message'])
+      spec.save!
     end
   end # Cli
 end # Rpmchange
