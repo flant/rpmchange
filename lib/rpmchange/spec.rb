@@ -96,8 +96,14 @@ module Rpmchange
     end
 
     def append_changelog(name:, email:, message:)
+      message_lines = message.to_s.split("\n")
+      message_lines[0] = "- #{message_lines[0]}"
+      1.upto(message_lines.size - 1).each do |i|
+        message_lines[i] = "  #{message_lines[i]}"
+      end
+
       ["* #{Time.now.strftime("%a %b %e %Y")} #{name} <#{email}> - #{full_version}",
-        "- #{message}",
+        message_lines.join("\n"),
         "",
       ].reverse_each {|line| _prepend_line(lines: changelog_lines, new_line: line)}
     end

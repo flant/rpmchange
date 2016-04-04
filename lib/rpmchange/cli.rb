@@ -11,7 +11,7 @@ module Rpmchange
         Spec.loadfile(options['specfile'])
       end
 
-      def spec_write!(spec)
+      def spec_write!(spec, options)
         File.open(options['specfile'], 'w') {|f| f.write spec.dump}
       end
     end # << self
@@ -20,17 +20,23 @@ module Rpmchange
       specfile: {type: :string, desc: "path to spec file", required: true},
     }
 
-    desc "append_changelog", "Make a new changelog entry at the end of current entries"
+    desc "changelog", "get changelog entries or " +
+                      "make a new changelog entry at the end of current entries"
     shared_options
-    method_option :name, {type: :string, desc: "maintainer name", required: true}
-    method_option :email, {type: :string, desc: "maintainer email", required: true}
-    method_option :message, {type: :string, desc: "changelog message", required: true}
-    def append_changelog
+    method_option :name, {type: :string, desc: "maintainer name"}
+    method_option :email, {type: :string, desc: "maintainer email"}
+    method_option :message, {type: :string, desc: "changelog message"}
+    method_option :append, {type: :boolean, desc: "append new changelog entry"}
+    def changelog
       spec = self.class.spec_construct options
-      spec.append_changelog(name: options['name'],
-                            email: options['email'],
-                            message: options['message'])
-      self.class.spec_write! spec
+      if options['append']
+        spec.append_changelog(name: options['name'],
+                              email: options['email'],
+                              message: options['message'])
+        self.class.spec_write! spec, options
+      else
+        puts spec.changelog_lines
+      end
     end
 
     desc "tag", "Get or set spec tag"
@@ -41,10 +47,13 @@ module Rpmchange
       spec = self.class.spec_construct options
       if options['value']
         spec.set_tag(options['name'], options['value'])
-        self.class.spec_write! spec
+        self.class.spec_write! spec, options
       else
-        value = spec.tag(options['name'])
-        puts value if value
+        if value = spec.tag(options['name'])
+          puts value
+        else
+          exit(1)
+        end
       end
     end
   end # Cli
