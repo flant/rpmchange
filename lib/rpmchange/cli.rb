@@ -39,7 +39,7 @@ module Rpmchange
       end
     end
 
-    desc "tag", "Get or set spec tag"
+    desc "tag", "get or set spec tag"
     shared_options
     method_option :name, {type: :string, desc: "tag name", required: true}
     method_option :value, {type: :string, desc: "tag value"}
@@ -55,6 +55,15 @@ module Rpmchange
           exit(1)
         end
       end
+    end
+
+    desc "patch", "append patch"
+    shared_options
+    method_option :name, {type: :string, desc: "patch name", required: true}
+    def patch
+      spec = self.class.spec_construct options
+      spec.append_patch(options['name'])
+      self.class.spec_write! spec, options
     end
   end # Cli
 end # Rpmchange
