@@ -33,11 +33,12 @@ describe Rpmchange::Spec do
       orig_content = path.read
       orig_spec = spec_load(orig_content)
 
-      spec.append_changelog name: 'Test', email: 'test@test.com', message: 'Test release'
+      name, email, message = ['Test', 'test@test.com', 'Test release']
+      spec.append_changelog name: name, email: email, message: message
       expect(spec.dump).not_to eq(orig_content)
       expect(spec.diff(diff: "-U 0").to_s).to eq <<-ENTRY
-+* #{Time.now.strftime("%a %b %e %Y")} Test <test@test.com> - #{spec.full_version}
-+- Test release
++* #{Time.now.strftime("%a %b %e %Y")} #{name} <#{email}> - #{spec.full_version}
++- #{message}
 +
       ENTRY
     end
