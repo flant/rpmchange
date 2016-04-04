@@ -12,9 +12,6 @@ module Rpmchange
       def diff(a, b, **kwargs)
         Diffy::Diff.new(a.to_s, b.to_s, {diff: "-U 3"}.merge(kwargs))
       end
-
-      def without_macro
-      end
     end # << self
 
     attr_reader :str
