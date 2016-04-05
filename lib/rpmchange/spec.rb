@@ -102,7 +102,7 @@ module Rpmchange
       ["* #{Time.now.strftime("%a %b %e %Y")} #{name} <#{email}> - #{full_version}",
         message_lines.join("\n"),
         "",
-      ].reverse_each {|line| _prepend_line(lines: changelog_lines, new_line: line)}
+      ].reverse_each {|line| _prepend_value(lines: changelog_lines, value: line)}
     end
 
     def to_tag_name(tag)
@@ -116,11 +116,11 @@ module Rpmchange
     end
 
     def set_tag(tag, value)
-      _replace_line(lines: preamble_lines, new_line: "#{to_tag_name(tag)}: #{value.strip}", match: /#{to_tag_name(tag)}:/)
+      _replace_line(lines: preamble_lines, value: "#{to_tag_name(tag)}: #{value.strip}", match: /#{to_tag_name(tag)}:/)
     end
 
     def append_tag(tag, value)
-      _append_line(lines: preamble_lines, new_line: "#{to_tag_name(tag)}: #{value}")
+      _append_value(lines: preamble_lines, value: "#{to_tag_name(tag)}: #{value}")
     end
 
     def append_patch(value)
@@ -145,13 +145,29 @@ module Rpmchange
         end
         "Patch#{patch_num}: #{value}"
       end
-      _append_line(lines: preamble_lines, new_line: make_line, after: _patch_tag_line_regex)
+      _append_value(lines: preamble_lines, value: make_line, after: _patch_tag_line_regex)
       patch_num
     end
 
     def append_patch_macro(num)
-      _append_line(lines: prep_lines, new_line: "%patch#{num} -p1", after: _patch_macro_line_regex)
+      _append_value(lines: prep_lines, value: "%patch#{num} -p1", after: _patch_macro_line_regex)
       nil
+    end
+
+    def append(section:, value:, after: nil)
+      _append_value(lines: section_lines(section), value: value, after: after)
+    end
+
+    def prepend(section:, value:, before: nil)
+      _prepend_value(lines: section_lines(section), value: value, before: before)
+    end
+
+    def replace(section:, value:, match:)
+      _replace_line(lines: section_lines(section), value: value, match: match)
+    end
+
+    def delete(section:, match:)
+      _delete_all_lines(lines: section_lines(section), match: match)
     end
 
     def sections
@@ -164,7 +180,9 @@ module Rpmchange
 
     SECTIONS = %i{prep build install clean check files changelog}
     SECTIONS.each do |section|
-      define_method("#{section}_lines") {|params=nil| (sections[section] || {})[params] || []}
+      define_method(:section_lines) {|section, params: nil| (sections[section.to_sym] || {})[params] || []}
+      define_method(:section?) {|section, params: nil| sections.key?(section.to_sym) and sections[section.to_sym].key?(params)}
+      define_method("#{section}_lines") {|**kwargs| section_lines(section, **kwargs)}
     end
 
     protected
@@ -173,7 +191,7 @@ module Rpmchange
       @_patch_macro_line_regex ||= /^%patch[0-9]*/
     end
 
-    def _append_line(lines:, new_line:, after: nil)
+    def _append_value(lines:, value:, after: nil)
       find_index = proc do |lines|
         if after
           ind = lines.rindex {|line| line.to_s =~ after}
@@ -182,10 +200,10 @@ module Rpmchange
           -1
         end
       end
-      _insert_line(lines: lines, new_line: new_line, find_index: find_index)
+      _insert_value(lines: lines, value: value, find_index: find_index)
     end
 
-    def _prepend_line(lines:, new_line:, before: nil)
+    def _prepend_value(lines:, value:, before: nil)
       find_index = proc do |lines|
         if before
           lines.index {|line| line.to_s =~ before} || 0
@@ -193,21 +211,29 @@ module Rpmchange
           0
         end
       end
-      _insert_line(lines: lines, new_line: new_line, find_index: find_index)
+      _insert_value(lines: lines, value: value, find_index: find_index)
     end
 
-    def _insert_line(lines:, new_line:, find_index:)
+    def _value_to_lines(value, *args)
+      res = (value.respond_to?(:call) ? value.call(*args) : value).to_s
+      res.empty? ? [res] : res.split("\n")
+    end
+
+    def _insert_value(lines:, value:, find_index:)
       if ind = find_index.call(lines)
-        line = (new_line.respond_to?(:call) ? new_line.call(ind) : new_line).to_s.chomp
-        lines.insert(ind, line)
+        lines.insert(ind, *_value_to_lines(value, ind))
       end
     end
 
-    def _replace_line(lines:, new_line:, match:)
+    def _replace_line(lines:, value:, match:)
       if ind = lines.index {|line| line.to_s =~ match}
-        line = (new_line.respond_to?(:call) ? new_line.call(ind) : new_line).to_s.chomp
-        lines[ind] = line
+        lines.delete_at(ind)
+        lines.insert(ind, *_value_to_lines(value, ind))
       end
+    end
+
+    def _delete_all_lines(lines:, match:)
+      lines.delete_if {|line| line.to_s =~ match}
     end
 
     def _patch_tag_line_parse(line)

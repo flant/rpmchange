@@ -43,4 +43,36 @@ describe Rpmchange::Spec do
       ENTRY
     end
   end
+
+  it 'appends lines to each section' do
+    fixture_rpmspec_each do |spec, path|
+      spec.class::SECTIONS.each do |section|
+        next unless spec.section? section
+
+        spec.append(section: section, value: "line1\nline2")
+        expect(spec.section_lines(section)[-2]).to eq("line1")
+        expect(spec.section_lines(section)[-1]).to eq("line2")
+
+        spec.prepend(section: section, value: "\nline3\nline4\n")
+        expect(spec.section_lines(section)[0]).to eq("")
+        expect(spec.section_lines(section)[1]).to eq("line3")
+        expect(spec.section_lines(section)[2]).to eq("line4")
+
+        spec.append(section: section, value: "line5\nline6", after: /^line4$/)
+        expect(spec.section_lines(section)[3]).to eq("line5")
+        expect(spec.section_lines(section)[4]).to eq("line6")
+
+        spec.delete(section: section, match: /^line4$/)
+        expect(spec.section_lines(section)[2]).to eq("line5")
+
+        spec.prepend(section: section, value: "line7\nline8", before: /^line5$/)
+        expect(spec.section_lines(section)[2]).to eq("line7")
+        expect(spec.section_lines(section)[3]).to eq("line8")
+
+        spec.replace(section: section, value: "line eight\nline nine", match: /^line8$/)
+        expect(spec.section_lines(section)[3]).to eq("line eight")
+        expect(spec.section_lines(section)[4]).to eq("line nine")
+      end
+    end
+  end
 end
