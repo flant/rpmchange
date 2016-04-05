@@ -1,2 +1,2 @@
 # rpmchange
-Simple rpm spec parser and emitter.
+Rpm spec change tool.
