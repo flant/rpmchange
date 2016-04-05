@@ -57,12 +57,51 @@ module Rpmchange
       end
     end
 
-    desc "patch", "append patch"
+    desc "patch", "append patch tag and macro"
     shared_options
     method_option :name, {type: :string, desc: "patch name", required: true}
     def patch
       spec = self.class.spec_construct options
       spec.append_patch(options['name'])
+      self.class.spec_write! spec, options
+    end
+
+    desc "append", "append given value in section"
+    shared_options
+    method_option :section, {type: :string, desc: "spec file section name", required: true}
+    method_option :value, {type: :string, desc: "value to append", required: true}
+    method_option :after, {type: :string, desc: "append value after line matching given regex"}
+    def append
+      spec = self.class.spec_construct options
+      after = options['after']
+      after = Regexp.new(after) if after
+      spec.append(section: options['section'], value: options['value'], after: after)
+      self.class.spec_write! spec, options
+    end
+
+    desc "prepend", "prepend given value in section"
+    shared_options
+    method_option :section, {type: :string, desc: "spec file section name", required: true}
+    method_option :value, {type: :string, desc: "value to prepend", required: true}
+    method_option :before, {type: :string, desc: "prepend value before line matching given regex"}
+    def prepend
+      spec = self.class.spec_construct options
+      before = options['before']
+      before = Regexp.new(before) if before
+      spec.prepend(section: options['section'], value: options['value'], before: before)
+      self.class.spec_write! spec, options
+    end
+
+    desc "replace", "replace line matching given regex in section"
+    shared_options
+    method_option :section, {type: :string, desc: "spec file section name", required: true}
+    method_option :value, {type: :string, desc: "replace with value", required: true}
+    method_option :match, {type: :string, desc: "regex to match line"}
+    def replace
+      spec = self.class.spec_construct options
+      match = options['match']
+      match = Regexp.new(match) if match
+      spec.replace(section: options['section'], value: options['value'], match: match)
       self.class.spec_write! spec, options
     end
   end # Cli
